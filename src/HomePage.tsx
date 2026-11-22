@@ -213,7 +213,7 @@ function HomePage() {
 
             <form
               onSubmit={handleSubmit}
-              className="mt-9 rounded-3xl border border-[#eeebf1] bg-white p-3 shadow-[0_20px_60px_-32px_rgba(47,37,77,0.28)] sm:p-4"
+              className="mt-9 rounded-3xl border border-[#eeebf1] bg-white p-2 shadow-[0_20px_60px_-32px_rgba(47,37,77,0.28)] sm:p-4"
             >
               <label
                 htmlFor="post-link"
@@ -222,7 +222,7 @@ function HomePage() {
                 Paste your X post link
               </label>
               <div className="flex flex-col gap-2 sm:flex-row">
-                <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-[#e9e7ed] bg-[#fbfafc] px-4 transition focus-within:border-[#a99af4] focus-within:ring-4 focus-within:ring-[#7256e8]/10">
+                <div className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-[#e9e7ed] bg-[#fbfafc] px-3 transition focus-within:border-[#a99af4] focus-within:ring-4 focus-within:ring-[#7256e8]/10 sm:px-4">
                   <svg
                     aria-hidden="true"
                     viewBox="0 0 24 24"
@@ -242,7 +242,7 @@ function HomePage() {
                     type="text"
                     inputMode="url"
                     autoComplete="url"
-                    placeholder="https://x.com/username/status/..."
+                    placeholder="https://x.com/..."
                     value={link}
                     onChange={(event) => {
                       setLink(event.target.value)
@@ -345,7 +345,7 @@ function HomePage() {
           </div>
 
           <div className="relative mx-auto w-full max-w-lg lg:max-w-none">
-            <div className="absolute -right-3 top-8 z-10 flex -rotate-6 items-center gap-2 rounded-2xl border border-white/80 bg-white px-4 py-3 shadow-xl shadow-[#44326d]/10 sm:-right-5 sm:top-12">
+            <div className="absolute -right-3 top-8 z-10 hidden -rotate-6 items-center gap-2 rounded-2xl border border-white/80 bg-white px-4 py-3 shadow-xl shadow-[#44326d]/10 lg:flex lg:-right-5 lg:top-12">
               <span className="text-xl" aria-hidden="true">
                 ✨
               </span>
@@ -353,7 +353,7 @@ function HomePage() {
                 Made to share
               </span>
             </div>
-            <div className="absolute -bottom-4 left-2 z-10 flex rotate-3 items-center gap-2 rounded-2xl border border-white/80 bg-white px-4 py-3 shadow-xl shadow-[#44326d]/10 sm:-left-5">
+            <div className="absolute -bottom-4 left-2 z-10 hidden rotate-3 items-center gap-2 rounded-2xl border border-white/80 bg-white px-4 py-3 shadow-xl shadow-[#44326d]/10 lg:flex lg:-left-5">
               <span className="flex size-7 items-center justify-center rounded-full bg-[#e5f7ea] text-[#32804a]">
                 <svg
                   aria-hidden="true"
@@ -422,8 +422,8 @@ function HomePage() {
                   <div className="absolute left-8 top-10 size-16 rounded-full bg-[#fff0d6] blur-2xl" />
                   <div className="absolute bottom-8 right-7 size-24 rounded-full bg-[#e6e1ff] blur-2xl" />
                   {videoUrl ? (
-                    <div className="relative flex flex-col items-center">
-                      <div className="flex size-52 items-center justify-center rounded-[2.75rem] bg-white p-3 shadow-[0_18px_45px_-30px_rgba(84,62,151,0.35)] sm:size-60">
+                    <div className="relative flex w-full max-w-sm flex-col items-center">
+                      <div className="flex aspect-square w-full max-w-52 items-center justify-center rounded-[2.75rem] bg-white p-3 shadow-[0_18px_45px_-30px_rgba(84,62,151,0.35)] sm:max-w-60">
                         <video
                           src={videoUrl}
                           aria-label="Converted animated MP4 video"
@@ -434,7 +434,7 @@ function HomePage() {
                           className="size-full object-contain"
                         />
                       </div>
-                      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      <div className="mt-6 flex w-full flex-col gap-3 sm:flex-row">
                         <button
                           type="button"
                           onClick={handleShareVideo}
@@ -480,8 +480,8 @@ function HomePage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="relative flex flex-col items-center">
-                      <div className="relative flex size-44 items-center justify-center rounded-[2.75rem] border-2 border-dashed border-[#d9d2fa] bg-white shadow-[0_18px_45px_-30px_rgba(84,62,151,0.35)] sm:size-52">
+                    <div className="relative flex w-full max-w-sm flex-col items-center">
+                      <div className="relative flex aspect-square w-full max-w-44 items-center justify-center rounded-[2.75rem] border-2 border-dashed border-[#d9d2fa] bg-white shadow-[0_18px_45px_-30px_rgba(84,62,151,0.35)] sm:max-w-52">
                         <div className="absolute -right-3 top-5 flex size-12 rotate-12 items-center justify-center rounded-2xl bg-[#ffd567] text-2xl shadow-md shadow-amber-200/60">
                           <span aria-hidden="true">✦</span>
                         </div>
