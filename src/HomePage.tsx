@@ -3,20 +3,12 @@ import { useEffect, useState, type FormEvent } from 'react'
 function HomePage() {
   const [link, setLink] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isVideoLoading, setIsVideoLoading] = useState(false)
-  const [stickerUrl, setStickerUrl] = useState<string | null>(null)
-  const [stickerFile, setStickerFile] = useState<Blob | null>(null)
-  const [convertedLink, setConvertedLink] = useState<string | null>(null)
+  const [videoFile, setVideoFile] = useState<Blob | null>(null)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [notice, setNotice] = useState<{
     type: 'error' | 'info'
     text: string
   } | null>(null)
-
-  useEffect(() => {
-    if (!stickerUrl) return
-    return () => URL.revokeObjectURL(stickerUrl)
-  }, [stickerUrl])
 
   useEffect(() => {
     if (!videoUrl) return
@@ -62,14 +54,12 @@ function HomePage() {
     }
 
     setIsLoading(true)
-    setStickerUrl(null)
-    setStickerFile(null)
-    setConvertedLink(null)
+    setVideoFile(null)
     setVideoUrl(null)
     setNotice(null)
 
     try {
-      const response = await fetch('/api/sticker', {
+      const response = await fetch('/api/video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: value }),
@@ -83,62 +73,7 @@ function HomePage() {
           'error' in error &&
           typeof error.error === 'string'
             ? error.error
-            : 'Could not create a sticker from this post.'
-        throw new Error(message)
-      }
-
-      if (!response.headers.get('content-type')?.includes('image/webp')) {
-        throw new Error('The server returned an unsupported sticker format.')
-      }
-
-      const sticker = await response.blob()
-      if (sticker.size === 0) {
-        throw new Error('The converted sticker was empty.')
-      }
-
-      setStickerUrl(URL.createObjectURL(sticker))
-      setStickerFile(sticker)
-      setConvertedLink(value)
-      setNotice({
-        type: 'info',
-        text: 'Your animated WebP is ready. Sending it to WhatsApp as an image may display it as a still picture; import it into a sticker pack to send it as an animated sticker.',
-      })
-    } catch (error) {
-      setNotice({
-        type: 'error',
-        text:
-          error instanceof Error
-            ? error.message
-            : 'Could not create a sticker. Please try again.',
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  async function handleCreateVideo() {
-    if (!convertedLink) return
-
-    setIsVideoLoading(true)
-    setVideoUrl(null)
-    setNotice(null)
-
-    try {
-      const response = await fetch('/api/video', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: convertedLink }),
-      })
-
-      if (!response.ok) {
-        const error: unknown = await response.json()
-        const message =
-          error !== null &&
-          typeof error === 'object' &&
-          'error' in error &&
-          typeof error.error === 'string'
-            ? error.error
-            : 'Could not create an MP4 video from this post.'
+          : 'Could not create an MP4 video from this post.'
         throw new Error(message)
       }
 
@@ -152,9 +87,10 @@ function HomePage() {
       }
 
       setVideoUrl(URL.createObjectURL(video))
+      setVideoFile(video)
       setNotice({
         type: 'info',
-        text: 'MP4 video is ready. It will play as a video in WhatsApp, not as a sticker.',
+        text: 'Your MP4 is ready. Share it to WhatsApp as a video or download it.',
       })
     } catch (error) {
       setNotice({
@@ -162,18 +98,18 @@ function HomePage() {
         text:
           error instanceof Error
             ? error.message
-            : 'Could not create an MP4 video. Please try again.',
+          : 'Could not create an MP4 video. Please try again.',
       })
     } finally {
-      setIsVideoLoading(false)
+      setIsLoading(false)
     }
   }
 
-  async function handleShareToWhatsApp() {
-    if (!stickerFile) return
+  async function handleShareVideo() {
+    if (!videoFile) return
 
-    const file = new File([stickerFile], 'whatsapp-sticker.webp', {
-      type: 'image/webp',
+    const file = new File([videoFile], 'loopsticker-video.mp4', {
+      type: 'video/mp4',
     })
 
     if (
@@ -182,7 +118,7 @@ function HomePage() {
     ) {
       setNotice({
         type: 'info',
-        text: 'File sharing is not supported in this browser. Download the sticker instead.',
+        text: 'Video sharing is not supported in this browser. Download the MP4 video instead.',
       })
       return
     }
@@ -190,11 +126,11 @@ function HomePage() {
     try {
       await navigator.share({
         files: [file],
-        title: 'WhatsApp sticker',
+        title: 'LoopSticker video',
       })
       setNotice({
         type: 'info',
-        text: 'This shares the WebP as a file; it does not add it to a WhatsApp sticker pack. Use the companion app to import stickers into a pack.',
+        text: 'Choose WhatsApp in the share menu to send this as a video. It will not be added as a sticker.',
       })
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return
@@ -204,7 +140,7 @@ function HomePage() {
         text:
           error instanceof Error
             ? `Could not open the share menu: ${error.message}`
-            : 'Could not open the share menu. Download the sticker instead.',
+            : 'Could not open the share menu. Download the MP4 video instead.',
       })
     }
   }
@@ -254,7 +190,7 @@ function HomePage() {
               <br />
               deserve to be
               <span className="relative ml-2 inline-block text-[#7256e8]">
-                stickers.
+                videos.
                 <svg
                   aria-hidden="true"
                   viewBox="0 0 220 12"
@@ -271,8 +207,8 @@ function HomePage() {
               </span>
             </h1>
             <p className="mt-6 max-w-lg text-base leading-7 text-[#777583] sm:text-lg sm:leading-8">
-              Paste a link to a GIF on X. Download an animated WebP for sticker
-              packs or create an MP4 video to share in WhatsApp chats.
+              Paste a link to a GIF on X and turn it into an MP4 video you can
+              share in WhatsApp chats.
             </p>
 
             <form
@@ -321,7 +257,7 @@ function HomePage() {
                   disabled={isLoading}
                   className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#7256e8] px-6 text-sm font-bold text-white shadow-lg shadow-[#7256e8]/20 transition hover:-translate-y-0.5 hover:bg-[#6245dc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7256e8] active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
                 >
-                  {isLoading ? 'Converting…' : 'Create sticker'}
+                  {isLoading ? 'Creating video…' : 'Create video'}
                   {isLoading ? (
                     <span
                       aria-hidden="true"
@@ -475,7 +411,7 @@ function HomePage() {
                       </svg>
                     </span>
                     <span className="text-sm font-bold text-[#33313f]">
-                      Your sticker
+                      Your video
                     </span>
                   </div>
                   <span className="rounded-full bg-[#f2efff] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7256e8]">
@@ -485,19 +421,23 @@ function HomePage() {
                 <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden bg-[#fcfbfe] px-6 py-10 sm:min-h-[380px]">
                   <div className="absolute left-8 top-10 size-16 rounded-full bg-[#fff0d6] blur-2xl" />
                   <div className="absolute bottom-8 right-7 size-24 rounded-full bg-[#e6e1ff] blur-2xl" />
-                  {stickerUrl ? (
+                  {videoUrl ? (
                     <div className="relative flex flex-col items-center">
                       <div className="flex size-52 items-center justify-center rounded-[2.75rem] bg-white p-3 shadow-[0_18px_45px_-30px_rgba(84,62,151,0.35)] sm:size-60">
-                        <img
-                          src={stickerUrl}
-                          alt="Converted animated WhatsApp sticker"
+                        <video
+                          src={videoUrl}
+                          aria-label="Converted animated MP4 video"
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
                           className="size-full object-contain"
                         />
                       </div>
                       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                         <button
                           type="button"
-                          onClick={handleShareToWhatsApp}
+                          onClick={handleShareVideo}
                           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#25a85a] px-5 text-sm font-bold text-white shadow-lg shadow-green-700/15 transition hover:bg-[#1e914c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25a85a]"
                         >
                           <svg
@@ -514,11 +454,11 @@ function HomePage() {
                               strokeLinejoin="round"
                             />
                           </svg>
-                          Share sticker file
+                          Share MP4 video
                         </button>
                         <a
-                          href={stickerUrl}
-                          download="whatsapp-sticker.webp"
+                          href={videoUrl}
+                          download="loopsticker-video.mp4"
                           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#ded9ef] bg-white px-5 text-sm font-bold text-[#514a70] transition hover:bg-[#f7f5fc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7256e8]"
                         >
                           <svg
@@ -535,26 +475,8 @@ function HomePage() {
                               strokeLinejoin="round"
                             />
                           </svg>
-                          Download animated WebP
+                          Download MP4 video
                         </a>
-                        {videoUrl ? (
-                          <a
-                            href={videoUrl}
-                            download="loopsticker-video.mp4"
-                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#ded9ef] bg-white px-5 text-sm font-bold text-[#514a70] transition hover:bg-[#f7f5fc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7256e8]"
-                          >
-                            Download MP4 video
-                          </a>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={handleCreateVideo}
-                            disabled={isVideoLoading}
-                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#ded9ef] bg-white px-5 text-sm font-bold text-[#514a70] transition hover:bg-[#f7f5fc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7256e8] disabled:cursor-wait disabled:opacity-60"
-                          >
-                            {isVideoLoading ? 'Creating MP4…' : 'Create MP4 video'}
-                          </button>
-                        )}
                       </div>
                     </div>
                   ) : (
@@ -567,11 +489,9 @@ function HomePage() {
                           <span aria-hidden="true">♥</span>
                         </div>
                         <div className="flex size-32 flex-col items-center justify-center rounded-[2rem] bg-[#f1edff] text-center sm:size-36">
-                          <span className="text-5xl" aria-hidden="true">
-                            GIF
-                          </span>
+                          <span className="text-5xl" aria-hidden="true">GIF</span>
                           <span className="mt-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#8b7bd6]">
-                            to sticker
+                            to video
                           </span>
                         </div>
                       </div>
@@ -586,10 +506,10 @@ function HomePage() {
                 </div>
                 <div className="flex items-center justify-between border-t border-[#f0eef3] px-5 py-4 sm:px-6">
                   <span className="text-xs font-semibold text-[#777583]">
-                    Animated sticker
+                    WhatsApp video
                   </span>
                   <span className="rounded-lg bg-[#f6f5f8] px-2.5 py-1.5 text-[10px] font-extrabold tracking-wide text-[#777583]">
-                    WEBP
+                    MP4
                   </span>
                 </div>
               </div>
@@ -607,7 +527,7 @@ function HomePage() {
                 Three little steps
               </p>
               <h2 className="mt-3 text-2xl font-black tracking-tight text-[#292735] sm:text-3xl">
-                From scroll to sticker
+                From scroll to video
               </h2>
             </div>
             <div className="grid gap-4 md:grid-cols-3">
@@ -620,14 +540,14 @@ function HomePage() {
                 },
                 {
                   number: '02',
-                  title: 'Make it a sticker',
-                  description: 'We’ll convert the GIF into an animated sticker.',
+                  title: 'Create an MP4 video',
+                  description: 'We’ll convert the GIF into a shareable video.',
                   color: 'bg-[#fff4dc] text-[#bf8411]',
                 },
                 {
                   number: '03',
-                  title: 'Add to WhatsApp',
-                  description: 'Download the animated sticker. A companion app is needed to add it to a WhatsApp pack.',
+                  title: 'Share or download',
+                  description: 'Send it as a video in WhatsApp or save the MP4.',
                   color: 'bg-[#e7f7eb] text-[#348250]',
                 },
               ].map((step) => (
@@ -650,10 +570,8 @@ function HomePage() {
               ))}
             </div>
             <p className="mt-7 text-center text-xs leading-5 text-[#9997a2]">
-              Public X posts only. Sending the WebP as an image can make it
-              appear static. WhatsApp animated stickers must be imported into
-              a pack using a companion app; each pack needs at least three
-              stickers.
+              Public X posts only. MP4s are sent as videos in WhatsApp chats,
+              not as stickers.
             </p>
           </div>
         </section>
@@ -661,7 +579,7 @@ function HomePage() {
 
       <footer className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 px-5 py-6 text-xs text-[#9997a2] sm:flex-row sm:px-8 lg:px-12">
         <span className="font-bold text-[#656371]">loopsticker</span>
-        <span>Good GIFs make great stickers.</span>
+        <span>Good GIFs make great videos.</span>
       </footer>
     </div>
   )

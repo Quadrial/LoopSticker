@@ -1,6 +1,6 @@
 # LoopSticker
 
-Turn a GIF from a public X post into an animated WebP sticker for WhatsApp.
+Turn a GIF from a public X post into an MP4 video for WhatsApp chats.
 
 ## Run locally
 
@@ -11,11 +11,9 @@ npm install
 npm run dev
 ```
 
-Vite also hosts the sticker API, so no separate backend process or proxy port is
-needed. Paste an X post link, then download an animated `.webp` file for a
-sticker pack or create an `.mp4` video to share in a WhatsApp chat. Sending the
-WebP from a browser sends it as ordinary media; WhatsApp may display it as a
-still image. It does not add it to a WhatsApp sticker pack.
+Vite also hosts the media API, so no separate backend process or proxy port is
+needed. Paste an X post link, create the MP4, then share it to WhatsApp as a
+video or download it. MP4 videos animate in chat but are not stickers.
 
 ## Production
 
@@ -24,7 +22,7 @@ npm run build
 npm start
 ```
 
-The Node server serves the built website and the sticker API. Set `PORT` on the
+The Node server serves the built website and the media API. Set `PORT` on the
 hosting platform if it requires a specific port.
 
 ## Media handling
@@ -33,10 +31,9 @@ hosting platform if it requires a specific port.
   GIF.
 - It uses the public `api.vxtwitter.com` resolver to locate the GIF. This is a
   third-party service and may change, rate-limit requests, or become unavailable.
-- FFmpeg converts the source to animated WebP, capped at 512 × 512 pixels,
-  10 seconds, 100 frames, and 500 KB.
-- The optional MP4 output is H.264 video, capped at 720 × 720 pixels and 10
-  seconds. WhatsApp sends this as a video, not as a sticker.
+- FFmpeg creates an H.264 MP4 video, capped at 720 × 720 pixels and 10 seconds.
+- The `/api/sticker` endpoint remains available for animated WebP sticker-pack
+  workflows; the website's main download and share options use MP4.
 - Media is converted in a temporary directory and removed after the response.
 - WhatsApp sticker packs must be added by a companion app. WhatsApp requires at
   least 3 stickers in a pack, and users must confirm adding the pack in WhatsApp.
