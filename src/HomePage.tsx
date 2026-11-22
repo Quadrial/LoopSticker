@@ -4,6 +4,7 @@ function HomePage() {
   const [link, setLink] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [stickerUrl, setStickerUrl] = useState<string | null>(null)
+  const [stickerFile, setStickerFile] = useState<Blob | null>(null)
   const [notice, setNotice] = useState<{
     type: 'error' | 'info'
     text: string
@@ -54,6 +55,7 @@ function HomePage() {
 
     setIsLoading(true)
     setStickerUrl(null)
+    setStickerFile(null)
     setNotice(null)
 
     try {
@@ -85,9 +87,10 @@ function HomePage() {
       }
 
       setStickerUrl(URL.createObjectURL(sticker))
+      setStickerFile(sticker)
       setNotice({
         type: 'info',
-        text: 'Your sticker is ready. Download it to add it to WhatsApp.',
+        text: 'Your sticker is ready. Share it to WhatsApp or download it.',
       })
     } catch (error) {
       setNotice({
@@ -99,6 +102,46 @@ function HomePage() {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function handleShareToWhatsApp() {
+    if (!stickerFile) return
+
+    const file = new File([stickerFile], 'whatsapp-sticker.webp', {
+      type: 'image/webp',
+    })
+
+    if (
+      !navigator.share ||
+      (navigator.canShare && !navigator.canShare({ files: [file] }))
+    ) {
+      setNotice({
+        type: 'info',
+        text: 'File sharing is not supported in this browser. Download the sticker instead.',
+      })
+      return
+    }
+
+    try {
+      await navigator.share({
+        files: [file],
+        title: 'WhatsApp sticker',
+      })
+      setNotice({
+        type: 'info',
+        text: 'Choose WhatsApp in the share menu. Adding a sticker to a pack may still require an import step.',
+      })
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return
+
+      setNotice({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? `Could not open the share menu: ${error.message}`
+            : 'Could not open the share menu. Download the sticker instead.',
+      })
     }
   }
 
@@ -387,27 +430,50 @@ function HomePage() {
                           className="size-full object-contain"
                         />
                       </div>
-                      <a
-                        href={stickerUrl}
-                        download="whatsapp-sticker.webp"
-                        className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#7256e8] px-5 text-sm font-bold text-white shadow-lg shadow-[#7256e8]/20 transition hover:bg-[#6245dc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7256e8]"
-                      >
-                        <svg
-                          aria-hidden="true"
-                          viewBox="0 0 20 20"
-                          fill="none"
-                          className="size-4"
+                      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={handleShareToWhatsApp}
+                          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#25a85a] px-5 text-sm font-bold text-white shadow-lg shadow-green-700/15 transition hover:bg-[#1e914c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25a85a]"
                         >
-                          <path
-                            d="M10 3v10m0 0 3.5-3.5M10 13l-3.5-3.5M4 15.5v1h12v-1"
-                            stroke="currentColor"
-                            strokeWidth="1.7"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                        Download sticker
-                      </a>
+                          <svg
+                            aria-hidden="true"
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            className="size-4"
+                          >
+                            <path
+                              d="M10 13V3m0 0L6.5 6.5M10 3l3.5 3.5M4 11.5v4h12v-4"
+                              stroke="currentColor"
+                              strokeWidth="1.7"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          Add to WhatsApp
+                        </button>
+                        <a
+                          href={stickerUrl}
+                          download="whatsapp-sticker.webp"
+                          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#ded9ef] bg-white px-5 text-sm font-bold text-[#514a70] transition hover:bg-[#f7f5fc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7256e8]"
+                        >
+                          <svg
+                            aria-hidden="true"
+                            viewBox="0 0 20 20"
+                            fill="none"
+                            className="size-4"
+                          >
+                            <path
+                              d="M10 3v10m0 0 3.5-3.5M10 13l-3.5-3.5M4 15.5v1h12v-1"
+                              stroke="currentColor"
+                              strokeWidth="1.7"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          Download sticker
+                        </a>
+                      </div>
                     </div>
                   ) : (
                     <div className="relative flex flex-col items-center">
@@ -479,7 +545,7 @@ function HomePage() {
                 {
                   number: '03',
                   title: 'Add to WhatsApp',
-                  description: 'Download your sticker and add it to your chats.',
+                  description: 'Share it to WhatsApp or download it to your device.',
                   color: 'bg-[#e7f7eb] text-[#348250]',
                 },
               ].map((step) => (
@@ -502,8 +568,8 @@ function HomePage() {
               ))}
             </div>
             <p className="mt-7 text-center text-xs leading-5 text-[#9997a2]">
-              Public X posts only. Adding stickers to WhatsApp may require an
-              import step on your device.
+              Public X posts only. Sharing opens your device’s share menu;
+              adding a sticker to a WhatsApp pack may require an import step.
             </p>
           </div>
         </section>

@@ -12,8 +12,8 @@ npm run dev
 ```
 
 Vite also hosts the sticker API, so no separate backend process or proxy port is
-needed. Paste an X post link, create the sticker, and download the resulting
-`.webp` file.
+needed. Paste an X post link, create the sticker, then share it to WhatsApp from
+your device's share menu or download the resulting `.webp` file.
 
 ## Production
 
@@ -34,5 +34,7 @@ hosting platform if it requires a specific port.
 - FFmpeg converts the source to animated WebP, capped at 512 × 512 pixels,
   10 seconds, 100 frames, and 500 KB.
 - Media is converted in a temporary directory and removed after the response.
-- A website can download the sticker, but adding it to a WhatsApp sticker pack
-  may require an import step on the user's device.
+- On supported mobile browsers, the share action sends the `.webp` file to the
+  device share menu. Select WhatsApp there; adding it to a sticker pack may
+  require a separate import step. Websites cannot directly install stickers
+  into a WhatsApp pack.
