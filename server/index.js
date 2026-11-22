@@ -276,11 +276,48 @@ async function convertToSticker(inputPath, outputPath) {
   )
 }
 
-async function handleStickerRequest(request, response) {
+async function convertToVideo(inputPath, outputPath) {
+  await runFfmpeg([
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-y',
+    '-i',
+    inputPath,
+    '-t',
+    '10',
+    '-vf',
+    'scale=720:720:force_original_aspect_ratio=decrease:force_divisible_by=2:flags=lanczos,fps=30',
+    '-an',
+    '-c:v',
+    'libx264',
+    '-preset',
+    'veryfast',
+    '-crf',
+    '26',
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    outputPath,
+  ])
+
+  const video = await readFile(outputPath)
+  if (video.length === 0) {
+    throw new HttpError(500, 'Could not create the MP4 video.')
+  }
+  return video
+}
+
+async function getPostSource(request) {
   const body = await readJsonRequest(request)
   const postId = getPostId(body.url)
   const mediaUrl = await getGifUrl(postId)
-  const source = await downloadMedia(mediaUrl)
+  return downloadMedia(mediaUrl)
+}
+
+async function handleStickerRequest(request, response) {
+  const source = await getPostSource(request)
   const workDir = await mkdtemp(join(tmpdir(), 'loopsticker-'))
 
   try {
@@ -296,6 +333,28 @@ async function handleStickerRequest(request, response) {
       'Cache-Control': 'no-store',
     })
     response.end(sticker)
+  } finally {
+    await rm(workDir, { recursive: true, force: true })
+  }
+}
+
+async function handleVideoRequest(request, response) {
+  const source = await getPostSource(request)
+  const workDir = await mkdtemp(join(tmpdir(), 'loopsticker-'))
+
+  try {
+    const inputPath = join(workDir, 'source.mp4')
+    const outputPath = join(workDir, `${randomUUID()}.mp4`)
+    await writeFile(inputPath, source)
+    const video = await convertToVideo(inputPath, outputPath)
+
+    response.writeHead(200, {
+      'Content-Type': 'video/mp4',
+      'Content-Length': video.length,
+      'Content-Disposition': 'attachment; filename="loopsticker-video.mp4"',
+      'Cache-Control': 'no-store',
+    })
+    response.end(video)
   } finally {
     await rm(workDir, { recursive: true, force: true })
   }
@@ -372,7 +431,7 @@ export function handleApiRequest(request, response) {
     return true
   }
 
-  if (pathname === '/api/sticker') {
+  if (pathname === '/api/sticker' || pathname === '/api/video') {
     if (request.method !== 'POST') {
       sendJson(response, 405, { error: 'Method not allowed.' })
       return true
@@ -384,7 +443,9 @@ export function handleApiRequest(request, response) {
     }
     activeJobs += 1
 
-    handleStickerRequest(request, response).catch((error) => {
+    const isVideo = pathname === '/api/video'
+    const handleRequest = isVideo ? handleVideoRequest : handleStickerRequest
+    handleRequest(request, response).catch((error) => {
       if (response.headersSent) {
         response.destroy()
         return
@@ -395,9 +456,11 @@ export function handleApiRequest(request, response) {
         return
       }
 
-      console.error('Sticker conversion failed:', error)
+      console.error(`${isVideo ? 'Video' : 'Sticker'} conversion failed:`, error)
       sendJson(response, 500, {
-        error: 'Could not convert this GIF. Please try another public X post.',
+        error: isVideo
+          ? 'Could not create an MP4 video from this post.'
+          : 'Could not convert this GIF. Please try another public X post.',
       })
     }).finally(() => {
       activeJobs -= 1

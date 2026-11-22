@@ -3,8 +3,11 @@ import { useEffect, useState, type FormEvent } from 'react'
 function HomePage() {
   const [link, setLink] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isVideoLoading, setIsVideoLoading] = useState(false)
   const [stickerUrl, setStickerUrl] = useState<string | null>(null)
   const [stickerFile, setStickerFile] = useState<Blob | null>(null)
+  const [convertedLink, setConvertedLink] = useState<string | null>(null)
+  const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [notice, setNotice] = useState<{
     type: 'error' | 'info'
     text: string
@@ -14,6 +17,11 @@ function HomePage() {
     if (!stickerUrl) return
     return () => URL.revokeObjectURL(stickerUrl)
   }, [stickerUrl])
+
+  useEffect(() => {
+    if (!videoUrl) return
+    return () => URL.revokeObjectURL(videoUrl)
+  }, [videoUrl])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -56,6 +64,8 @@ function HomePage() {
     setIsLoading(true)
     setStickerUrl(null)
     setStickerFile(null)
+    setConvertedLink(null)
+    setVideoUrl(null)
     setNotice(null)
 
     try {
@@ -88,9 +98,10 @@ function HomePage() {
 
       setStickerUrl(URL.createObjectURL(sticker))
       setStickerFile(sticker)
+      setConvertedLink(value)
       setNotice({
         type: 'info',
-        text: 'Your sticker is ready. Share it to WhatsApp or download it.',
+        text: 'Your animated WebP is ready. Sending it to WhatsApp as an image may display it as a still picture; import it into a sticker pack to send it as an animated sticker.',
       })
     } catch (error) {
       setNotice({
@@ -102,6 +113,59 @@ function HomePage() {
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function handleCreateVideo() {
+    if (!convertedLink) return
+
+    setIsVideoLoading(true)
+    setVideoUrl(null)
+    setNotice(null)
+
+    try {
+      const response = await fetch('/api/video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: convertedLink }),
+      })
+
+      if (!response.ok) {
+        const error: unknown = await response.json()
+        const message =
+          error !== null &&
+          typeof error === 'object' &&
+          'error' in error &&
+          typeof error.error === 'string'
+            ? error.error
+            : 'Could not create an MP4 video from this post.'
+        throw new Error(message)
+      }
+
+      if (!response.headers.get('content-type')?.includes('video/mp4')) {
+        throw new Error('The server returned an unsupported video format.')
+      }
+
+      const video = await response.blob()
+      if (video.size === 0) {
+        throw new Error('The generated video was empty.')
+      }
+
+      setVideoUrl(URL.createObjectURL(video))
+      setNotice({
+        type: 'info',
+        text: 'MP4 video is ready. It will play as a video in WhatsApp, not as a sticker.',
+      })
+    } catch (error) {
+      setNotice({
+        type: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Could not create an MP4 video. Please try again.',
+      })
+    } finally {
+      setIsVideoLoading(false)
     }
   }
 
@@ -130,7 +194,7 @@ function HomePage() {
       })
       setNotice({
         type: 'info',
-        text: 'Choose WhatsApp in the share menu. Adding a sticker to a pack may still require an import step.',
+        text: 'This shares the WebP as a file; it does not add it to a WhatsApp sticker pack. Use the companion app to import stickers into a pack.',
       })
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') return
@@ -207,8 +271,8 @@ function HomePage() {
               </span>
             </h1>
             <p className="mt-6 max-w-lg text-base leading-7 text-[#777583] sm:text-lg sm:leading-8">
-              Paste a link to a GIF on X. We’ll turn it into an animated
-              WhatsApp sticker you can take with you.
+              Paste a link to a GIF on X. Download an animated WebP for sticker
+              packs or create an MP4 video to share in WhatsApp chats.
             </p>
 
             <form
@@ -450,7 +514,7 @@ function HomePage() {
                               strokeLinejoin="round"
                             />
                           </svg>
-                          Add to WhatsApp
+                          Share sticker file
                         </button>
                         <a
                           href={stickerUrl}
@@ -471,8 +535,26 @@ function HomePage() {
                               strokeLinejoin="round"
                             />
                           </svg>
-                          Download sticker
+                          Download animated WebP
                         </a>
+                        {videoUrl ? (
+                          <a
+                            href={videoUrl}
+                            download="loopsticker-video.mp4"
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#ded9ef] bg-white px-5 text-sm font-bold text-[#514a70] transition hover:bg-[#f7f5fc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7256e8]"
+                          >
+                            Download MP4 video
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleCreateVideo}
+                            disabled={isVideoLoading}
+                            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#ded9ef] bg-white px-5 text-sm font-bold text-[#514a70] transition hover:bg-[#f7f5fc] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7256e8] disabled:cursor-wait disabled:opacity-60"
+                          >
+                            {isVideoLoading ? 'Creating MP4…' : 'Create MP4 video'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -545,7 +627,7 @@ function HomePage() {
                 {
                   number: '03',
                   title: 'Add to WhatsApp',
-                  description: 'Share it to WhatsApp or download it to your device.',
+                  description: 'Download the animated sticker. A companion app is needed to add it to a WhatsApp pack.',
                   color: 'bg-[#e7f7eb] text-[#348250]',
                 },
               ].map((step) => (
@@ -568,8 +650,10 @@ function HomePage() {
               ))}
             </div>
             <p className="mt-7 text-center text-xs leading-5 text-[#9997a2]">
-              Public X posts only. Sharing opens your device’s share menu;
-              adding a sticker to a WhatsApp pack may require an import step.
+              Public X posts only. Sending the WebP as an image can make it
+              appear static. WhatsApp animated stickers must be imported into
+              a pack using a companion app; each pack needs at least three
+              stickers.
             </p>
           </div>
         </section>
